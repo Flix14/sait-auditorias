@@ -19,21 +19,21 @@ import (
 
 var dialect = goqu.Dialect("mysql")
 
-//Usuario description
+//Usuario es una estructura de los datos de los usuarios en el sistema
 type Usuario struct {
 	ID     int    `json:"id"`
 	Estado uint8  `json:"estado"`
 	Email  string `json:"email"`
 }
 
-//Proyecto description Debe tener lista de servidores en los que se encuentra el proyecto
+//Proyecto es una estructura de los datos de los proyectos en el sistema
 type Proyecto struct {
 	ID         int    `json:"id"`
 	Nombre     string `json:"nombre"`
 	Servidores []int  `json:"servidores"`
 }
 
-//Servidor description
+//Servidor es una estructura de los datos de los servidores en el sistema
 type Servidor struct {
 	ID               int       `json:"id"`
 	DireccionPublica string    `json:"direccion_publica"`
@@ -41,34 +41,31 @@ type Servidor struct {
 	Dominios         []Dominio `json:"dominios"`
 }
 
-//Dominio description
+//Dominio es una estructura de los datos de los dominios en el sistema
 type Dominio struct {
 	ID      int    `json:"id"`
 	Dominio string `json:"dominio"`
 }
 
-//Auditoria description
+//Auditoria es una estructura de los datos de las auditorías en el sistema
 type Auditoria struct {
-	ID                 int    `json:"id"`
-	Motivo             string `json:"motivo"`
-	Comentario         string `json:"comentario"`
-	Comandos           string `json:"comandos"`
-	Fecha              string `json:"fecha"`
-	Usuario            string `json:"usuario"`
-	NombreProyecto     string `json:"nombre_proyecto"`
-	IPServidor         string `json:"ip_servidor"`
-	IDUsuario          int    `json:"id_usuario"`
-	IDProyecto         int    `json:"id_proyecto"`
-	IDServidor         int    `json:"id_servidor"`
-	IDProyectoServidor int    `json:"id_proyecto_servidor"`
+	ID             int    `json:"id"`
+	Motivo         string `json:"motivo"`
+	Comentario     string `json:"comentario"`
+	Comandos       string `json:"comandos"`
+	Fecha          string `json:"fecha"`
+	Usuario        string `json:"usuario"`
+	NombreProyecto string `json:"nombre_proyecto"`
+	IPServidor     string `json:"ip_servidor"`
+	IDUsuario      int    `json:"id_usuario"`
+	IDProyecto     int    `json:"id_proyecto"`
+	IDServidor     int    `json:"id_servidor"`
 }
 
-//Paginas description
+//Paginas es una estructura de los datos de las páginas para el sistema de paginado de los datos de las demás estructuras
 type Paginas struct {
-	NumeroPaginas  int    `json:"numero_paginas"`
-	TotalElementos int    `json:"total_elementos"`
-	Prev           string `json:"prev"`
-	Next           string `json:"next"`
+	NumeroPaginas  int `json:"numero_paginas"`
+	TotalElementos int `json:"total_elementos"`
 }
 
 func obtenerBaseDeDatos() (db *sql.DB, e error) {
@@ -92,7 +89,7 @@ func getUsuarios(c *gin.Context) {
 	var selectSQL string
 	var selectPaginaSQL string
 	var pagina Paginas
-	var page, _ = strconv.Atoi(c.Query("pagina"))
+	var page, _ = strconv.Atoi(c.DefaultQuery("pagina", "0"))
 	offset := (uint)(page-1) * 10
 	usuarios := []Usuario{}
 	estado1 := c.DefaultQuery("estado", "0")
@@ -103,11 +100,17 @@ func getUsuarios(c *gin.Context) {
 	}
 	defer db.Close()
 	if email := c.Query("email"); email != "" {
-		selectSQL, _, _ = dialect.From("usuarios").Where(goqu.And(
-			goqu.C("email").ILike(email+"%"),
-			goqu.Ex{"estado": []string{estado1, estado2}},
-		)).Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
-		fmt.Println(selectSQL)
+		if page <= 0 {
+			selectSQL, _, _ = dialect.From("usuarios").Where(goqu.And(
+				goqu.C("email").ILike(email+"%"),
+				goqu.Ex{"estado": []string{estado1, estado2}},
+			)).Order(goqu.C("id").Desc()).Limit(10).ToSQL()
+		} else {
+			selectSQL, _, _ = dialect.From("usuarios").Where(goqu.And(
+				goqu.C("email").ILike(email+"%"),
+				goqu.Ex{"estado": []string{estado1, estado2}},
+			)).Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
+		}
 		selectPaginaSQL, _, _ = dialect.From("usuarios").Select(goqu.COUNT("*").As("total_elementos")).Where(goqu.And(
 			goqu.C("email").ILike(email+"%"),
 			goqu.Ex{"estado": []string{estado1, estado2}},
@@ -129,7 +132,7 @@ func getUsuarios(c *gin.Context) {
 	}
 	filas, err := db.Query(selectSQL)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer filas.Close()
@@ -239,7 +242,7 @@ func updateUsuario(c *gin.Context) {
 	).ToSQL()
 	result, err := db.Exec(updateSQL)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	rowsAffected, _ := result.RowsAffected()
@@ -249,7 +252,7 @@ func updateUsuario(c *gin.Context) {
 	}
 	id, err := strconv.ParseInt(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 	usuario.ID = int(id)
 	c.JSON(http.StatusOK, usuario)
@@ -261,7 +264,7 @@ func getProyectos(c *gin.Context) {
 	var selectSQL string
 	var selectPaginaSQL string
 	var pagina Paginas
-	var page, _ = strconv.Atoi(c.Query("pagina"))
+	var page, _ = strconv.Atoi(c.DefaultQuery("pagina", "0"))
 	offset := (uint)(page-1) * 10
 	proyectos := []Proyecto{}
 	if err != nil {
@@ -270,8 +273,18 @@ func getProyectos(c *gin.Context) {
 	}
 	defer db.Close()
 	if nombre := c.Query("nombre"); nombre != "" {
-		selectSQL, _, _ = dialect.From("proyectos").Where(goqu.C("nombre").ILike(nombre + "%")).Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
-		selectPaginaSQL, _, _ = dialect.From("proyectos").Select(goqu.COUNT("*").As("total_elementos")).Where(goqu.C("nombre").ILike(nombre + "%")).ToSQL()
+		if page <= 0 {
+			selectSQL, _, _ = dialect.From("proyectos").Where(
+				goqu.C("nombre").ILike(nombre + "%"),
+			).Order(goqu.C("id").Desc()).Limit(10).ToSQL()
+		} else {
+			selectSQL, _, _ = dialect.From("proyectos").Where(
+				goqu.C("nombre").ILike(nombre + "%"),
+			).Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
+		}
+		selectPaginaSQL, _, _ = dialect.From("proyectos").Select(goqu.COUNT("*").As("total_elementos")).Where(
+			goqu.C("nombre").ILike(nombre + "%"),
+		).ToSQL()
 	} else if page > 0 {
 		selectSQL, _, _ = dialect.From("proyectos").Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
 		selectPaginaSQL, _, _ = dialect.From("proyectos").Select(goqu.COUNT("*").As("total_elementos")).ToSQL()
@@ -281,7 +294,7 @@ func getProyectos(c *gin.Context) {
 	}
 	filas, err := db.Query(selectSQL)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer filas.Close()
@@ -411,6 +424,7 @@ func createProyecto(c *gin.Context) {
 func updateProyecto(c *gin.Context) {
 	db, err := obtenerBaseDeDatos()
 	var proyecto Proyecto
+	var insertSQL string
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
@@ -431,21 +445,29 @@ func updateProyecto(c *gin.Context) {
 	).Where(
 		goqu.Ex{"id": c.Param("id")},
 	).ToSQL()
-	result, err := db.Exec(updateSQL)
+	_, err = db.Exec(updateSQL)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		return
-	}
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Rows affected: 0"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	id, err := strconv.ParseInt(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 	proyecto.ID = int(id)
+
+	deleteSQL, _, _ := dialect.Delete("proyectos_servidores").Where(goqu.Ex{
+		"id_proyecto": proyecto.ID,
+	}).ToSQL()
+	db.Exec(deleteSQL)
+
+	for _, servidorID := range proyecto.Servidores {
+		insertSQL, _, _ = dialect.Insert("proyectos_servidores").Rows(
+			goqu.Record{"id_proyecto": proyecto.ID, "id_servidor": servidorID},
+		).ToSQL()
+		db.Exec(insertSQL)
+	}
+
 	c.JSON(http.StatusOK, proyecto)
 }
 
@@ -456,7 +478,7 @@ func getServidores(c *gin.Context) {
 	var selectSQL string
 	var selectPaginaSQL string
 	var pagina Paginas
-	var page, _ = strconv.Atoi(c.Query("pagina"))
+	var page, _ = strconv.Atoi(c.DefaultQuery("pagina", "0"))
 	offset := (uint)(page-1) * 10
 	servidores := []Servidor{}
 	if err != nil {
@@ -465,22 +487,38 @@ func getServidores(c *gin.Context) {
 	}
 	defer db.Close()
 	if direccionPublica := c.Query("direccion_publica"); direccionPublica != "" {
-		selectSQL, _, _ = dialect.From("servidores").Where(goqu.C("direccion_publica").ILike(direccionPublica + "%")).Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
-		selectPaginaSQL, _, _ = dialect.From("servidores").Select(goqu.COUNT("*").As("total_elementos")).Where(goqu.C("direccion_publica").ILike(direccionPublica + "%")).ToSQL()
+		if page <= 0 {
+			selectSQL, _, _ = dialect.From("servidores").Where(
+				goqu.C("direccion_publica").ILike(direccionPublica + "%")).Order(goqu.C("id").Desc()).Limit(10).ToSQL()
+		} else {
+			selectSQL, _, _ = dialect.From("servidores").Where(
+				goqu.C("direccion_publica").ILike(direccionPublica + "%")).Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
+		}
+		selectPaginaSQL, _, _ = dialect.From("servidores").Select(goqu.COUNT("*").As("total_elementos")).Where(
+			goqu.C("direccion_publica").ILike(direccionPublica + "%")).ToSQL()
 	} else if dominio := c.Query("dominio"); dominio != "" {
-		selectSQL, _, _ = dialect.From("servidores").Select(
-			goqu.I("servidores.id"), "direccion_publica", "sistema_operativo").Distinct().Join(
-			goqu.T("dominios"),
-			goqu.On(goqu.Ex{"servidores.id": goqu.I("dominios.id_servidor")}),
-		).Where(
-			goqu.C("dominio").ILike("%" + dominio + "%")).Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
-		fmt.Println(selectSQL)
-		selectPaginaSQL, _, _ = dialect.From("servidores").Select(goqu.COUNT(goqu.DISTINCT(goqu.I("servidores.id"))).As("total_elementos")).Join(
+		if offset <= 0 {
+			selectSQL, _, _ = dialect.From("servidores").Select(
+				goqu.I("servidores.id"), "direccion_publica", "sistema_operativo").Distinct().Join(
+				goqu.T("dominios"),
+				goqu.On(goqu.Ex{"servidores.id": goqu.I("dominios.id_servidor")}),
+			).Where(
+				goqu.C("dominio").ILike("%" + dominio + "%")).Order(goqu.C("id").Desc()).Limit(10).ToSQL()
+		} else {
+			selectSQL, _, _ = dialect.From("servidores").Select(
+				goqu.I("servidores.id"), "direccion_publica", "sistema_operativo").Distinct().Join(
+				goqu.T("dominios"),
+				goqu.On(goqu.Ex{"servidores.id": goqu.I("dominios.id_servidor")}),
+			).Where(
+				goqu.C("dominio").ILike("%" + dominio + "%")).Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
+		}
+		selectPaginaSQL, _, _ = dialect.From("servidores").Select(
+			goqu.COUNT(goqu.DISTINCT(goqu.I("servidores.id"))).As("total_elementos"),
+		).Join(
 			goqu.T("dominios"),
 			goqu.On(goqu.Ex{"servidores.id": goqu.I("dominios.id_servidor")}),
 		).Where(
 			goqu.C("dominio").ILike("%" + dominio + "%")).ToSQL()
-		fmt.Println(selectPaginaSQL)
 	} else if page > 0 {
 		selectSQL, _, _ = dialect.From("servidores").Order(goqu.C("id").Desc()).Offset(offset).Limit(10).ToSQL()
 		selectPaginaSQL, _, _ = dialect.From("servidores").Select(goqu.COUNT("*").As("total_elementos")).ToSQL()
@@ -490,7 +528,7 @@ func getServidores(c *gin.Context) {
 	}
 	filas, err := db.Query(selectSQL)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer filas.Close()
@@ -504,7 +542,7 @@ func getServidores(c *gin.Context) {
 	}
 	for index := range servidores {
 		serv := &servidores[index]
-		var listaServidores []Dominio
+		var listaDominios []Dominio
 		selectSQL, _, _ = dialect.From("dominios").Select("dominios.id", "dominio").Join(
 			goqu.T("servidores"),
 			goqu.On(goqu.Ex{"servidores.id": goqu.I("dominios.id_servidor")}),
@@ -513,7 +551,7 @@ func getServidores(c *gin.Context) {
 		}).ToSQL()
 		filas, err = db.Query(selectSQL)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		defer filas.Close()
@@ -523,9 +561,9 @@ func getServidores(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			listaServidores = append(listaServidores, dominio)
+			listaDominios = append(listaDominios, dominio)
 		}
-		serv.Dominios = listaServidores
+		serv.Dominios = listaDominios
 	}
 	db.QueryRow(selectPaginaSQL).Scan(&pagina.TotalElementos)
 	if (pagina.TotalElementos % 10) == 0 {
@@ -563,7 +601,7 @@ func getServidoresPorProyecto(c *gin.Context) {
 	}
 	defer filas.Close()
 	for filas.Next() {
-		err = filas.Scan(&servidor.ID, &servidor.DireccionPublica, &servidor.SistemaOperativo /*, &servidor.Dominio*/)
+		err = filas.Scan(&servidor.ID, &servidor.DireccionPublica, &servidor.SistemaOperativo)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -576,6 +614,7 @@ func getServidoresPorProyecto(c *gin.Context) {
 func getServidor(c *gin.Context) {
 	db, err := obtenerBaseDeDatos()
 	var servidor Servidor
+	var dominio Dominio
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
@@ -585,11 +624,34 @@ func getServidor(c *gin.Context) {
 		"id": c.Param("id"),
 	}).ToSQL()
 	fila := db.QueryRow(selectSQL)
-	err = fila.Scan(&servidor.ID, &servidor.DireccionPublica, &servidor.SistemaOperativo /*, &servidor.Dominio*/)
+	err = fila.Scan(&servidor.ID, &servidor.DireccionPublica, &servidor.SistemaOperativo)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+	var listaDominios []Dominio
+	selectSQL, _, _ = dialect.From("dominios").Select("dominios.id", "dominio").Join(
+		goqu.T("servidores"),
+		goqu.On(goqu.Ex{"servidores.id": goqu.I("dominios.id_servidor")}),
+	).Where(goqu.Ex{
+		"servidores.id": servidor.ID,
+	}).ToSQL()
+	filas, err := db.Query(selectSQL)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	defer filas.Close()
+	for filas.Next() {
+		err = filas.Scan(&dominio.ID, &dominio.Dominio)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		listaDominios = append(listaDominios, dominio)
+	}
+	servidor.Dominios = listaDominios
+
 	c.JSON(http.StatusOK, servidor)
 }
 
@@ -617,7 +679,7 @@ func createServidor(c *gin.Context) {
 	).ToSQL()
 	result, err := db.Exec(insertSQL)
 	if err != nil {
-		selectSQL, _, _ := dialect.From("servidores").Select("id", "sistema_operativo", "dominio").Where(goqu.Ex{
+		selectSQL, _, _ := dialect.From("servidores").Select("id", "sistema_operativo").Where(goqu.Ex{
 			"direccion_publica": servidor.DireccionPublica,
 		}).ToSQL()
 		fila := db.QueryRow(selectSQL)
@@ -639,7 +701,15 @@ func createServidor(c *gin.Context) {
 		).ToSQL()
 		_, err = db.Exec(insertSQL)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			deleteSQL, _, _ := dialect.Delete("dominios").Where(goqu.Ex{
+				"id_servidor": servidor.ID,
+			}).ToSQL()
+			db.Exec(deleteSQL)
+			deleteSQL, _, _ = dialect.Delete("servidores").Where(goqu.Ex{
+				"id": servidor.ID,
+			}).ToSQL()
+			db.Exec(deleteSQL)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 			return
 		}
 	}
@@ -650,6 +720,7 @@ func createServidor(c *gin.Context) {
 func updateServidor(c *gin.Context) {
 	db, err := obtenerBaseDeDatos()
 	var servidor Servidor
+	var errors []string
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
@@ -666,25 +737,40 @@ func updateServidor(c *gin.Context) {
 		return
 	}
 	updateSQL, _, _ := dialect.Update("servidores").Set(
-		goqu.Record{"direccion_publica": servidor.DireccionPublica, "sistema_operativo": servidor.SistemaOperativo /*, "dominio": servidor.Dominio*/},
+		goqu.Record{"direccion_publica": servidor.DireccionPublica, "sistema_operativo": servidor.SistemaOperativo},
 	).Where(
 		goqu.Ex{"id": c.Param("id")},
 	).ToSQL()
-	result, err := db.Exec(updateSQL)
+	_, err = db.Exec(updateSQL)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		return
-	}
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Rows affected: 0"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	id, err := strconv.ParseInt(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 	servidor.ID = int(id)
+
+	deleteSQL, _, _ := dialect.Delete("dominios").Where(goqu.Ex{
+		"id_servidor": servidor.ID,
+	}).ToSQL()
+	db.Exec(deleteSQL)
+
+	for _, serv := range servidor.Dominios {
+		insertSQL, _, _ := dialect.Insert("dominios").Rows(
+			goqu.Record{"id_servidor": servidor.ID, "dominio": serv.Dominio},
+		).ToSQL()
+		_, err = db.Exec(insertSQL)
+		if err != nil {
+			errors = append(errors, err.Error())
+		}
+	}
+	if err != nil {
+		c.JSON(http.StatusConflict, gin.H{"errors": errors})
+		return
+	}
+
 	c.JSON(http.StatusOK, servidor)
 }
 
@@ -698,7 +784,8 @@ func getAuditorias(c *gin.Context) {
 	offset := (uint)(page-1) * 10
 	auditorias := []Auditoria{}
 	t := time.Now()
-	fecha := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+	fecha := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d", t.Year(), t.Month(),
+		t.Day(), t.Hour(), t.Minute(), t.Second())
 	fechaLimitInf := c.DefaultQuery("limit_inf", "0000-00-00T00:00:00")
 	fechaLimitSup := c.DefaultQuery("limit_sup", fecha)
 	if err != nil {
@@ -742,12 +829,6 @@ func getAuditorias(c *gin.Context) {
 		} else {
 			pagina.NumeroPaginas = (pagina.TotalElementos / 10) + 1
 		}
-		if pagina.NumeroPaginas > page {
-			pagina.Next = "/auditorias?motivo=" + motivo + "&limit_inf" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page+1)
-		}
-		if page > 1 && page <= pagina.NumeroPaginas {
-			pagina.Prev = "/auditorias?motivo=" + motivo + "&limit_inf" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page-1)
-		}
 	} else if usuario := c.Query("usuario"); usuario != "" {
 		selectSQL, _, _ = dialect.From("proyectos").Select(
 			goqu.I("auditorias.id"),
@@ -786,12 +867,6 @@ func getAuditorias(c *gin.Context) {
 			pagina.NumeroPaginas = pagina.TotalElementos / 10
 		} else {
 			pagina.NumeroPaginas = (pagina.TotalElementos / 10) + 1
-		}
-		if pagina.NumeroPaginas > page {
-			pagina.Next = "/auditorias?usuario=" + usuario + "&limit_inf" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page+1)
-		}
-		if page > 1 && page <= pagina.NumeroPaginas {
-			pagina.Prev = "/auditorias?usuario=" + usuario + "&limit_inf" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page-1)
 		}
 	} else if nombreProyecto := c.Query("nombre_proyecto"); nombreProyecto != "" {
 		selectSQL, _, _ = dialect.From("proyectos").Select(
@@ -835,12 +910,6 @@ func getAuditorias(c *gin.Context) {
 		} else {
 			pagina.NumeroPaginas = (pagina.TotalElementos / 10) + 1
 		}
-		if pagina.NumeroPaginas > page {
-			pagina.Next = "/auditorias?nombre=" + nombreProyecto + "&limit_inf" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page+1)
-		}
-		if page > 1 && page <= pagina.NumeroPaginas {
-			pagina.Prev = "/auditorias?nombre=" + nombreProyecto + "&limit_inf" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page-1)
-		}
 	} else if servidorIP := c.Query("ip_servidor"); servidorIP != "" {
 		selectSQL, _, _ = dialect.From("proyectos").Select(
 			goqu.I("auditorias.id"),
@@ -883,12 +952,6 @@ func getAuditorias(c *gin.Context) {
 		} else {
 			pagina.NumeroPaginas = (pagina.TotalElementos / 10) + 1
 		}
-		if pagina.NumeroPaginas > page {
-			pagina.Next = "/auditorias?ip_servidor=" + servidorIP + "&limit_inf" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page+1)
-		}
-		if page > 1 && page <= pagina.NumeroPaginas {
-			pagina.Prev = "/auditorias?ip_servidor=" + servidorIP + "&limit_inf" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page-1)
-		}
 	} else {
 		selectSQL, _, _ = dialect.From("proyectos").Select(
 			goqu.I("auditorias.id"),
@@ -923,16 +986,10 @@ func getAuditorias(c *gin.Context) {
 		} else {
 			pagina.NumeroPaginas = (pagina.TotalElementos / 10) + 1
 		}
-		if pagina.NumeroPaginas > page {
-			pagina.Next = "/auditorias?limit_inf=" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page+1)
-		}
-		if page > 1 && page <= pagina.NumeroPaginas {
-			pagina.Prev = "/auditorias?limit_inf=" + fechaLimitInf + "&limit_sup" + fechaLimitSup + "&pagina=" + strconv.Itoa(page-1)
-		}
 	}
 	filas, err := db.Query(selectSQL)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer filas.Close()
@@ -981,7 +1038,8 @@ func getAuditoria(c *gin.Context) {
 		goqu.On(goqu.Ex{"auditorias.id_usuario": goqu.I("usuarios.id")}),
 	).Where(goqu.Ex{"auditorias.id": c.Param("id")}).ToSQL()
 	fila := db.QueryRow(selectSQL)
-	err = fila.Scan(&auditoria.ID, &auditoria.Motivo, &auditoria.Comentario, &auditoria.Comandos, &auditoria.Fecha, &auditoria.Usuario, &auditoria.NombreProyecto, &auditoria.IPServidor)
+	err = fila.Scan(&auditoria.ID, &auditoria.Motivo, &auditoria.Comentario,
+		&auditoria.Comandos, &auditoria.Fecha, &auditoria.Usuario, &auditoria.NombreProyecto, &auditoria.IPServidor)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -992,6 +1050,7 @@ func getAuditoria(c *gin.Context) {
 func createAuditoria(c *gin.Context) {
 	db, err := obtenerBaseDeDatos()
 	var auditoria Auditoria
+	var idProyectoServidor int
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
@@ -1007,19 +1066,19 @@ func createAuditoria(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
-	//ver errores que arroja si es que hay
 	selectSQL, _, _ := dialect.From("proyectos_servidores").Select("id").Where(
 		goqu.Ex{"id_proyecto": auditoria.IDProyecto},
 		goqu.Ex{"id_servidor": auditoria.IDServidor},
 	).ToSQL()
 	fila := db.QueryRow(selectSQL)
-	err = fila.Scan(&auditoria.IDProyectoServidor)
+	err = fila.Scan(&idProyectoServidor)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	insertSQL, _, _ := dialect.Insert("auditorias").Rows(
-		goqu.Record{"motivo": auditoria.Motivo, "comentario": auditoria.Comentario, "comandos": auditoria.Comandos, "id_usuario": auditoria.IDUsuario, "id_proyecto_servidor": auditoria.IDProyectoServidor},
+		goqu.Record{"motivo": auditoria.Motivo, "comentario": auditoria.Comentario,
+			"comandos": auditoria.Comandos, "id_usuario": auditoria.IDUsuario, "id_proyecto_servidor": idProyectoServidor},
 	).ToSQL()
 	result, err := db.Exec(insertSQL)
 	if err != nil {
