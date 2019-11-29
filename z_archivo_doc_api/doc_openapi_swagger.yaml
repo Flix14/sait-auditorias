@@ -1,0 +1,933 @@
+openapi: 3.0.1
+info:
+  title: SAIT Audit
+  description: API Description of SAIT Audit
+  version: v1
+servers:
+- url: http://localhost:3000/
+tags:
+- name: Usuarios
+  description: Operaciones de usuarios
+- name: Proyectos
+  description: Operaciones de proyectos
+- name: Servidores
+  description: Operaciones de servidores
+- name: Auditorías
+  description: Operaciones de auditorías
+paths:
+  /usuarios:
+    get:
+      tags:
+      - Usuarios
+      summary: Obtener todos los usuarios
+      operationId: getUsuarios
+      parameters:
+      - name: email
+        in: query
+        description: Filtrar los usuarios por email. Si no se utiliza junto con `pagina` se muestran los resultados de la `pagina` 1 por defecto.
+        schema:
+          type: string
+          example: usuario@gmail.com
+      - name: pagina
+        in: query
+        description: Filtrar por número de página
+        schema:
+          type: integer
+          example: 1
+      - name: estado
+        in: query
+        description: Filtrar por estado activo(1)/inactivo(0)
+        schema:
+          type: integer
+          example: 1
+      responses:
+        200:
+          description: Success response
+          content:
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  usuarios:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Usuario'
+                  pagina:
+                    $ref: '#/components/schemas/Pagina'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+      - Usuarios
+      summary: Agregar un nuevo usuario
+      operationId: createUsuario
+      requestBody:
+        description: Objeto necesario para crear un nuevo usuario
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Usuario'
+        required: true
+      responses:
+        201:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        400:
+          description: Bad request
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: Conflict
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        422:
+          description: Unprocessable Entity
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-codegen-request-body-name: body
+  /usuarios/{id}:
+    get:
+      tags:
+      - Usuarios
+      summary: Buscar usuario por ID
+      description: Retorna un único usuario
+      operationId: getUsuario
+      parameters:
+      - name: id
+        in: path
+        description: ID del ususario a retornar
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+      - Usuarios
+      summary: Actualizar un usuario existente
+      operationId: updateUsuario
+      parameters:
+      - name: id
+        in: path
+        description: ID del usuario que se va a actualizar
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        description: Objeto necesario para actualizar el usuario
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Usuario'
+        required: true
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        422:
+          description: Unprocessable Entity
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-codegen-request-body-name: body
+  /proyectos:
+    get:
+      tags:
+      - Proyectos
+      summary: Obtener todos los proyectos
+      operationId: getProyectos
+      parameters:
+      - name: nombre
+        in: query
+        description: Filtrar los proyectos por nombre. Si no se utiliza junto con `pagina` se muestran los resultados de la `pagina` 1 por defecto.
+        schema:
+          type: string
+          example: SAIT 123
+      - name: pagina
+        in: query
+        description: Filtrar por número de página
+        schema:
+          type: integer
+          example: 1
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proyectos:
+                    $ref: '#/components/schemas/Proyecto'
+                  pagina:
+                    $ref: '#/components/schemas/Pagina'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+      - Proyectos
+      summary: Agregar un nuevo proyecto
+      operationId: createProyecto
+      requestBody:
+        description: Objeto necesario para crear un nuevo proyecto
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Proyecto'
+        required: true
+      responses:
+        201:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proyecto'
+        400:
+          description: Bad request
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: Conflict
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proyecto'
+        422:
+          description: Unprocessable Entity
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-codegen-request-body-name: body
+  /proyectos/{id}:
+    get:
+      tags:
+      - Proyectos
+      summary: Buscar proyecto por ID
+      description: Retorna un único proyecto
+      operationId: getProyecto
+      parameters:
+      - name: id
+        in: path
+        description: ID del proyecto a retornar
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proyecto'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+      - Proyectos
+      summary: Actualizar un proyecto existente
+      operationId: updateProyecto
+      parameters:
+      - name: id
+        in: path
+        description: ID del proyecto que se va a actualizar
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        description: Objeto necesario para actualizar el proyecto
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Proyecto'
+        required: true
+      responses:
+        200:
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proyecto'
+        400:
+          description: Bad request
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        422:
+          description: Unprocessable Entity
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-codegen-request-body-name: body
+  /servidores/{id}/proyectos:
+    get:
+      tags:
+      - Proyectos
+      summary: Obtener todos los proyectos de un servidor
+      operationId: getProyectosPorServidores
+      parameters:
+      - name: id
+        in: path
+        description: ID del servidor
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Proyecto'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /servidores:
+    get:
+      tags:
+      - Servidores
+      summary: Obtener todos los servidores
+      operationId: getServidores
+      parameters:
+      - name: direccion_publica
+        in: query
+        description: Filtrar los servidores por su ip pública. Si no se utiliza junto con `pagina` se muestran los resultados de la `pagina` 1 por defecto. No es compatible con `dominio`.
+        schema:
+          type: string
+          example: 213.133.21.112
+      - name: dominio
+        in: query
+        description: Filtrar los servidores por su dominio. Si no se utiliza junto con `pagina` se muestran los resultados de la `pagina` 1 por defecto. No es compatible con `direccion_publica`.
+        schema:
+          type: string
+          example: www.example.com
+      - name: pagina
+        in: query
+        description: Filtrar por número de página
+        schema:
+          type: integer
+          example: 1
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties:
+                  servidores:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Servidor'
+                  pagina:
+                    $ref: '#/components/schemas/Pagina'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+      - Servidores
+      summary: Agregar un nuevo servidor
+      operationId: createServidor
+      requestBody:
+        description: Objeto necesario para crear un nuevo servidor
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Servidor'
+        required: true
+      responses:
+        201:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Servidor'
+        400:
+          description: Bad request
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: Conflict
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Servidor'
+        422:
+          description: Unprocessable Entity
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-codegen-request-body-name: body
+  /servidores/{id}:
+    get:
+      tags:
+      - Servidores
+      summary: Buscar servidor por ID
+      description: Retorna un único servidor
+      operationId: getServidor
+      parameters:
+      - name: id
+        in: path
+        description: ID del servidor a retornar
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Servidor'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+      - Servidores
+      summary: Actualizar un servidor existente
+      operationId: updateServidor
+      parameters:
+      - name: id
+        in: path
+        description: ID del servidor que se va a actualizar
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        description: Objeto necesario para actualizar el servidor
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Servidor'
+        required: true
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Servidor'
+        400:
+          description: Bad request
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        422:
+          description: Unprocessable Entity
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-codegen-request-body-name: body
+  /proyectos/{id}/servidores:
+    get:
+      tags:
+      - Servidores
+      summary: Obtener todos los servidores de un proyecto
+      operationId: getServidoresPorProyecto
+      parameters:
+      - name: id
+        in: path
+        description: ID del proyecto
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Servidor'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auditorias:
+    get:
+      tags:
+      - Auditorías
+      summary: Obtener todas las auditorías
+      operationId: getAuditorias
+      parameters:
+      - name: motivo
+        in: query
+        description: Filtrar las auditorías por motivo. No es compatible con `usuario`, `nombre_poyecto`ni `ip_servidor`. Si no se utiliza junto con `pagina` se muestran los resultados de la `pagina` 1 por defecto.
+        schema:
+          type: string
+          example: Actualización
+      - name: usuario
+        in: query
+        description: Filtrar las auditorías por usuario. No es compatible con `motivo`, `nombre_poyecto`ni `ip_servidor`. Si no se utiliza junto con `pagina` se muestran los resultados de la `pagina` 1 por defecto.
+        schema:
+          type: string
+          example: usuario@gmail.com
+      - name: nombre_proyecto
+        in: query
+        description: Filtrar las auditorías por proyecto. No es compatible con `usuario`, `motivo`ni `ip_servidor`. Si no se utiliza junto con `pagina` se muestran los resultados de la `pagina` 1 por defecto.
+        schema:
+          type: string
+          example: SAIT 123
+      - name: ip_servidor
+        in: query
+        description: Filtrar las auditorías por servidor. No es compatible con `usuario`, `nombre_poyecto`ni `motivo`. Si no se utiliza junto con `pagina` se muestran los resultados de la `pagina` 1 por defecto.
+        schema:
+          type: string
+          example: 213.133.21.112
+      - name: pagina
+        in: query
+        description: Filtrar número de página.
+        schema:
+          type: integer
+          example: 1
+      - name: limit_inf
+        in: query
+        description: Filtrar por fecha (desde que día y hora). Debe ser usado junto a `limit_sup`.
+        schema:
+          type: string
+          example: "2019-01-31T11:59:59"
+      - name: limit_sup
+        in: query
+        description: Filtrar por fecha (hasta que día y hora). Debe ser usado junto a `limit_inf`.
+        schema:
+          type: string
+          example: "2019-01-31T11:59:59"
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auditorias:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Auditoria'
+                  pagina:
+                    $ref: '#/components/schemas/Pagina'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+      - Auditorías
+      summary: Agregar una nueva auditoría
+      operationId: createAuditoria
+      requestBody:
+        description: Objeto necesario para crear una nueva auditoría
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Auditoria'
+        required: true
+      responses:
+        201:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auditoria'
+        400:
+          description: Bad request
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        422:
+          description: Unprocessable Entity
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-codegen-request-body-name: body
+  /auditorias/{id}:
+    get:
+      tags:
+      - Auditorías
+      summary: Buscar auditorías por ID
+      description: Retorna una única auditoría
+      operationId: getAuditoria
+      parameters:
+      - name: id
+        in: path
+        description: ID de la auditoría a retornar
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: Success response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auditoria'
+        404:
+          description: Not found
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        503:
+          description: Service unavailable
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID del usuario
+          readOnly: true
+        estado:
+          type: integer
+          description: Valor 1/0 que determina si el usuario está habilitado/deshabilitado
+        email:
+          type: string
+          description: Correo electrónico del usuario
+    Proyecto:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID del proyecto
+          readOnly: true
+        nombre:
+          type: string
+          description: Nombre del servidor
+        servidores:
+          type: array
+          description: Arreglo de ID's de los servidores del proyecto
+          items:
+            type: integer
+    Dominio:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID del dominio
+          readOnly: true
+        dominio:
+          type: string
+          description: Texto del dominio
+          example: www.example.com
+    Servidor:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID del servidor
+          readOnly: true
+        direccion_publica:
+          type: string
+          description: Dirección IP pública del servidor
+          example: 213.133.21.112
+        sistema_operativo:
+          type: string
+          description: Sistema operativo del servidor
+        dominios:
+          $ref: "#/components/schemas/Dominio"
+    Pagina:
+      type: object
+      properties:
+        numero_paginas:
+          type: integer
+          description: Número de páginas de de datos divididas de 10 en 10
+          readOnly: true
+        total_elementos:
+          type: integer
+          description: Total de elementos contando todas las páginas
+          readOnly: true
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Mensaje de error
+          readOnly: true
+    Auditoria:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID de la auditoría
+          readOnly: true
+        motivo:
+          type: string
+          description: Razón por la cual se ingresó al servidor
+        comentario:
+          type: string
+          description: Comentario adicional opcional
+        comandos:
+          type: string
+          description: Lista de comandos realizados en el servidor
+        id_usuario:
+          type: integer
+          description: ID del usuario que creó la auditoría
+          writeOnly: true
+        id_proyecto:
+          type: integer
+          description: ID del proyecto al que pertenece la auditoría
+          writeOnly: true
+        id_servidor:
+          type: integer
+          description: ID del servidor al que pertenece la auditoría
+          writeOnly: true
+        fecha:
+          type: string
+          description: Fecha en la que se realizó la auditoría
+          readOnly: true
+        usuario:
+          type: string
+          description: Correo electrónico del usuario que realizó la auditoría
+          readOnly: true
+        nombre_proyecto:
+          type: string
+          description: Nombre del proyecto sobre el cual se realizó la auditoría
+          readOnly: true
+        ip_servidor:
+          type: integer
+          description: IP pública del servidor sobre el cual se realizó la auditoría
+          readOnly: true
